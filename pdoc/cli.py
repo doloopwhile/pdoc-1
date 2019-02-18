@@ -8,8 +8,11 @@ import os
 import os.path as path
 import sys
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from typing import List
 
 import pdoc
+import pdoc.json
+
 
 parser = argparse.ArgumentParser(
     description="Automatically generate API docs for Python modules.",
@@ -35,6 +38,7 @@ aa(
          "will be shown in the output. Search is case sensitive. "
          "Has no effect when --http is set.",
 )
+aa("--json", action="store_true", help="When set, the output will be JSON formatted.")
 aa("--html", action="store_true", help="When set, the output will be HTML formatted.")
 aa(
     "--html-dir",
@@ -281,6 +285,10 @@ def write_html_files(m: pdoc.Module):
         write_html_files(submodule)
 
 
+def _write_json(modules: List[pdoc.Module]) -> None:
+    pdoc.json.dump_modules(modules, sys.stdout)
+
+
 def main(_args=None):
     """ Command-line entry point """
     global args
@@ -338,11 +346,14 @@ def main(_args=None):
                for module in args.modules]
     pdoc.link_inheritance()
 
-    for module in modules:
-        if args.html:
+    if args.html:
+        for module in modules:
             _quit_if_exists(module)
             write_html_files(module)
-        else:
+    elif args.json:
+        _write_json(modules)
+    else:
+        for module in modules:
             sys.stdout.write(module.text())
             # Two blank lines between two modules' texts
             sys.stdout.write(os.linesep * (1 + 2 * int(module != modules[-1])))
